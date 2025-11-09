@@ -1,6 +1,8 @@
 #include "Chess.h"
 #include <limits>
 #include <cmath>
+#include <map>
+#include <regex>
 
 Chess::Chess()
 {
@@ -47,6 +49,7 @@ void Chess::setUpBoard()
 
     _grid->initializeChessSquares(pieceSize, "boardsquare.png");
     FENtoBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+    // FENtoBoard("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
     startGame();
 }
@@ -61,6 +64,69 @@ void Chess::FENtoBoard(const std::string& fen) {
     // 3: castling availability (KQkq or -)
     // 4: en passant target square (in algebraic notation, or -)
     // 5: halfmove clock (number of halfmoves since the last capture or pawn advance)
+
+    std::map<char, ChessPiece> pieceTypes {
+        {'p', ChessPiece::Pawn},
+        {'n', ChessPiece::Knight},
+        {'b', ChessPiece::Bishop},
+        {'r', ChessPiece::Rook},
+        {'q', ChessPiece::Queen},
+        {'k', ChessPiece::King},
+    };
+
+    // I GOT THIS REGEX FROM CHATGPT (SEEMS TO CHECK OUT, ALSO CHECKED ON REGEX101)
+    // Regex explanation:
+    // 1. ([rnbqkpRNBQKP1-8/]+) → piece placement
+    // 2. (?:\s+([wb]))? → optional active color
+    // 3. (?:\s+([-KQkq]+))? → optional castling availability
+    // 4. (?:\s+([-a-h1-8]+))? → optional en passant target square
+    // 5. (?:\s+(\d+))? → optional halfmove clock
+    // 6. (?:\s+(\d+))? → optional fullmove number
+    std::regex fenRegex(
+        "^\\s*([rnbqkpRNBQKP1-8/]+)(?:\\s+([wb]))?(?:\\s+([-KQkq]+))?(?:\\s+([-a-h1-8]+))?(?:\\s+(\\d+))?(?:\\s+(\\d+))?\\s*$"
+    );
+    std::smatch match;
+
+    std::string fields[6];
+
+    // If there is a match, place the strings in the corresponding fields
+    if (std::regex_match(fen, match, fenRegex)) {
+        std::cout << match.size() << std::endl;
+        for (size_t i = 1; i < match.size(); i++) {
+            if (match[i].matched) {
+                fields[i - 1] = match[i].str();
+            }
+            else (fields[i - 1] = "-");
+        }
+    }
+    else return;
+
+    if (fields[0] != "-") {
+        int row = 7;
+        int col = 0;
+        for (char ch : fields[0]) {
+            if (isdigit(ch)) {
+                col += ch - '0'; // If you see a number, move over that number of columns
+            }
+            else if (ch == '/') {
+                row--; // Go up a row when you see a forward slash
+                col = 0;
+            }
+            else {
+                int playerNum = isupper(ch) ? 0 : 1; // Uppercase pieces are white, lowercase are black
+                Bit* bit = PieceForPlayer(playerNum, pieceTypes[tolower(ch)]);
+                if (bit) {
+                    ChessSquare *square = _grid->getSquare(col, row);
+                    bit->setPosition(square->getPosition());
+                    square->setBit(bit);
+                }
+
+                col++;
+            }
+        }
+    }
+    
+    
 }
 
 bool Chess::actionForEmptyHolder(BitHolder &holder)
