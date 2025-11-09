@@ -1,4 +1,5 @@
 #include "Grid.h"
+#include <algorithm> // added include for find - Marcus
 
 Grid::Grid(int width, int height) : _width(width), _height(height)
 {

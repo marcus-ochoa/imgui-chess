@@ -40,7 +40,8 @@ bool Sprite::highlighted()
 	return _highlighted;
 }
 
-#ifdef __APPLE__
+// #ifdef __APPLE__ // Old line
+#if defined(__APPLE__) || defined(__linux__) // Changed line to include linux - Marcus
 #include "../imgui/imgui_impl_opengl3_loader.h"
 
 ImTextureID Sprite::_loadTextureFromMemory(const unsigned char *image_data, int image_width, int image_height)
