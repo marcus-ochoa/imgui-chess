@@ -10,8 +10,6 @@ Chess::Chess()
 
     for (int i = 0; i < 64; i++) {
         _knightBitboards[i] = generateKnightMoveBitboard(i);
-        _knightBitboards[i].printBitboard();
-
         _kingBitboards[i] = generateKingMoveBitboard(i);
     }
 }
@@ -44,6 +42,9 @@ Bit* Chess::PieceForPlayer(const int playerNumber, ChessPiece piece)
     bit->LoadTextureFromFile(spritePath.c_str());
     bit->setOwner(getPlayerAt(playerNumber));
     bit->setSize(pieceSize, pieceSize);
+
+    int tag = (playerNumber == 0) ? piece : piece + 128;
+    bit->setGameTag(tag);
 
     return bit;
 }
@@ -99,7 +100,6 @@ void Chess::FENtoBoard(const std::string& fen) {
 
     // If there is a match, place the strings in the corresponding fields
     if (std::regex_match(fen, match, fenRegex)) {
-        std::cout << match.size() << std::endl;
         for (size_t i = 1; i < match.size(); i++) {
             if (match[i].matched) {
                 fields[i - 1] = match[i].str();
@@ -250,8 +250,11 @@ std::vector<BitMove> Chess::generateAllMoves()
 
     int playerColor = getCurrentPlayer()->playerNumber();
 
-    BitboardElement knights = BitboardElement(0ULL);
     BitboardElement pawns = BitboardElement(0ULL);
+    BitboardElement knights = BitboardElement(0ULL);
+    BitboardElement bishops = BitboardElement(0ULL);
+    BitboardElement rooks = BitboardElement(0ULL);
+    BitboardElement queens = BitboardElement(0ULL);
     BitboardElement king = BitboardElement(0ULL);
 
     const char *pieces = (playerColor == WHITE) ? "0PNBRQK" : "0pnbrqk";
@@ -261,6 +264,12 @@ std::vector<BitMove> Chess::generateAllMoves()
             pawns |= 1ULL << i;
         } else if (state[i] == pieces[2]) {
             knights |= 1ULL << i;
+        } else if (state[i] == pieces[3]) {
+            bishops |= 1ULL << i;
+        } else if (state[i] == pieces[4]) {
+            rooks |= 1ULL << i;
+        } else if (state[i] == pieces[5]) {
+            queens |= 1ULL << i;
         } else if (state[i] == pieces[6]) {
             king |= 1ULL << i;
         }
@@ -274,7 +283,8 @@ std::vector<BitMove> Chess::generateAllMoves()
         }
     }
 
-    BitboardElement occupancy = BitboardElement(knights.getData() | pawns.getData() | king.getData());
+    BitboardElement occupancy = BitboardElement(pawns.getData() | knights.getData() | bishops.getData() | 
+        rooks.getData() | queens.getData() | king.getData());
     BitboardElement emptySquares = BitboardElement(~occupancy.getData());
     BitboardElement enemySquares = BitboardElement(~(unoccupiedSquares.getData() | occupancy.getData()));
     
