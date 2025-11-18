@@ -6,3 +6,5 @@ Simple moves (Knight, Pawns, King) are working. Followed the approaches from cla
 FEN string to board is working. I used regex to get all the fields, although I am only using the first field with board layout for now.
 
 ![Screenshot](/screenshots/fen-string-setup.png "Screenshot")
+
+Platform: Linux
