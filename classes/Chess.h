@@ -34,6 +34,8 @@ public:
     Player *checkForWinner() override;
     bool checkForDraw() override;
 
+    void bitMovedFromTo(Bit &bit, BitHolder &src, BitHolder &dst) override;
+
     std::string initialStateString() override;
     std::string stateString() override;
     void setStateString(const std::string &s) override;

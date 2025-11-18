@@ -213,6 +213,13 @@ bool Chess::checkForDraw()
     return false;
 }
 
+// Overriding this function to allow for regeneration of moves
+void Chess::bitMovedFromTo(Bit &bit, BitHolder &src, BitHolder &dst)
+{
+    endTurn();
+    _moves = generateAllMoves();
+}
+
 std::string Chess::initialStateString()
 {
     return stateString();
@@ -250,6 +257,7 @@ std::vector<BitMove> Chess::generateAllMoves()
 
     int playerColor = getCurrentPlayer()->playerNumber();
 
+    // Get occupancy bitboards for each piece type
     BitboardElement pawns = BitboardElement(0ULL);
     BitboardElement knights = BitboardElement(0ULL);
     BitboardElement bishops = BitboardElement(0ULL);
@@ -289,7 +297,7 @@ std::vector<BitMove> Chess::generateAllMoves()
     BitboardElement enemySquares = BitboardElement(~(unoccupiedSquares.getData() | occupancy.getData()));
     
     generateKnightMoves(moves, knights, emptySquares);
-    generatePawnMoves(moves, pawns, emptySquares, enemySquares, playerColor);
+    generatePawnMoves(moves, pawns, unoccupiedSquares, enemySquares, playerColor); // Pass in unoccupied squares so that pawn cannot capture forward
     generateKingMoves(moves, king, emptySquares);
 
     return moves;
