@@ -283,6 +283,18 @@ std::vector<BitMove> Chess::generateAllMoves()
         }
     }
 
+    /*
+        for (int i = 0; i < 64; i++) {
+            
+            _bitboards[i] = 0;
+        }
+
+        for (int i = 0; i < 64; i++) {
+            
+            _bitboardLookup[state[i]] |= 1ULL << i;
+        }
+    */
+
     BitboardElement unoccupiedSquares = BitboardElement(0ULL);
 
     for (int i = 0; i < 64; i++) {
@@ -299,6 +311,7 @@ std::vector<BitMove> Chess::generateAllMoves()
     generateKnightMoves(moves, knights, emptySquares);
     generatePawnMoves(moves, pawns, unoccupiedSquares, enemySquares, playerColor); // Pass in unoccupied squares so that pawn cannot capture forward
     generateKingMoves(moves, king, emptySquares);
+    // generateBishopMoves(moves, _bitboards[WHITE_BISHOPS + bitIndex], _bitboards[OCCUPANCY].getData(), _bitboards[WHITE_ALL_PIECES + bitIndex].getData())
 
     return moves;
 }
@@ -411,3 +424,19 @@ void Chess::addPawnBitboardMovesToList(std::vector<BitMove> &moves, const Bitboa
         moves.emplace_back(fromSquare, toSquare, Pawn);
     });
 }
+
+
+/*
+void Chess::generateBishopMoves(moves, piecesBoard, )
+{
+    piecesBoard.forEachBit([&](int fromSquare) {
+        BitboardElement moveBitboard = BitboardElement(_knightBitboards[fromSquare].getData() & (emptySquares.getData()));
+        // Efficiently iterate through only the set bits
+        moveBitboard.forEachBit([&](int toSquare) {
+           moves.emplace_back(fromSquare, toSquare, Knight);
+        });
+    });
+}
+
+*/
+
