@@ -349,6 +349,8 @@ void Game::mouseUp(ImVec2 &location, Entity *entity)
 	}
 	if (_dragBit)
 	{
+		clearBoardHighlights(); // Moved this line up from below
+
 		if (_dragMoved)
 		{
 			// Update the drag tracking to the final mouse position:
@@ -357,7 +359,7 @@ void Game::mouseUp(ImVec2 &location, Entity *entity)
 				_dropTarget->setHighlighted(false);
 			if (_dragBit)
 				_dragBit->setPickedUp(false);
-			clearBoardHighlights();
+			// clearBoardHighlights(); Moved this line up so it works even if cursor doesn't move
 
 			if (_dropTarget && _dropTarget->bit())
 			{
