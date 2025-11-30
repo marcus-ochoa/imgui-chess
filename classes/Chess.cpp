@@ -482,8 +482,8 @@ void Chess::updateAI()
         // Calculate and print out boards per second
         const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - searchStart).count();
         const double boardsPerSecond = seconds > 0.0 ? static_cast<double>(_countMoves) / seconds : 0.0;
-        std::cout << "Moves checked: " << _countMoves << " (" << std::fixed << std::setprecision(2) << boardsPerSecond << " boards/s)" << std::defaultfloat << std::endl;
-
+        std::cout << "Moves checked: " << _countMoves << " (" << std::fixed << std::setprecision(2) << boardsPerSecond << " boards/s)" 
+            << std::defaultfloat << " MAX DEPTH = " << MAX_DEPTH << std::endl;
         // Make best move
         int srcSquare = bestMove.from;
         int dstSquare = bestMove.to;
