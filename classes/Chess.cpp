@@ -5,6 +5,8 @@
 #include <cmath>
 #include <map>
 #include <regex>
+#include <chrono>
+#include <iomanip>
 
 Chess::Chess()
 {
@@ -27,6 +29,34 @@ Chess::Chess()
     _bitboardLookup['q'] = BLACK_QUEENS;
     _bitboardLookup['k'] = BLACK_KING;
     _bitboardLookup['0'] = EMPTY_SQUARES;
+
+    _evaluateScores['P'] = 100;
+    _evaluateScores['N'] = 300;
+    _evaluateScores['B'] = 400;
+    _evaluateScores['R'] = 500;
+    _evaluateScores['Q'] = 900;
+    _evaluateScores['K'] = 2000;
+    _evaluateScores['p'] = -100;
+    _evaluateScores['n'] = -300;
+    _evaluateScores['b'] = -400;
+    _evaluateScores['r'] = -500;
+    _evaluateScores['q'] = -900;
+    _evaluateScores['k'] = -2000;
+    _evaluateScores['0'] = 0;
+
+    _pieceSquareTables['P'] = pawnTableWhite;
+    _pieceSquareTables['N'] = knightTableWhite;
+    _pieceSquareTables['B'] = bishopTableWhite;
+    _pieceSquareTables['R'] = rookTableWhite;
+    _pieceSquareTables['Q'] = queenTableWhite;
+    _pieceSquareTables['K'] = kingTableWhite;
+    _pieceSquareTables['p'] = pawnTableBlack;
+    _pieceSquareTables['n'] = knightTableBlack;
+    _pieceSquareTables['b'] = bishopTableBlack;
+    _pieceSquareTables['r'] = rookTableBlack;
+    _pieceSquareTables['q'] = queenTableBlack;
+    _pieceSquareTables['k'] = kingTableBlack;
+    _pieceSquareTables['0'] = emptyTable;
 }
 
 Chess::~Chess()
@@ -77,6 +107,11 @@ void Chess::setUpBoard()
 
     std::string state = stateString();
     _moves = generateAllMoves(state, getCurrentPlayer()->playerNumber());
+
+    if (gameHasAI()) {
+        setAIPlayer(AI_PLAYER);
+    }
+
     startGame();
 }
 
@@ -275,6 +310,8 @@ void Chess::setStateString(const std::string &s)
 
 std::vector<BitMove> Chess::generateAllMoves(std::string& state, int playerColor)
 {
+    playerColor = (playerColor + 1) >> 1; // Converts -1 to 0 for when AI calls this function
+
     std::vector<BitMove> moves;
     moves.reserve(32);
 
@@ -413,24 +450,26 @@ void Chess::updateAI()
     BitMove bestMove;
     std::string state = stateString();
 
+    // Set time and move tracking variables
+    const auto searchStart = std::chrono::steady_clock::now();
     _countMoves = 0;
 
     for (auto move : _moves) {
 
-        int srcSquare = move.from;
-        int dstSquare = move.to;
+        // Save previous state
+        char oldDestination = state[move.to];
+        char pieceMoving = state[move.from];
 
-        // Makes the move in state string
-        char oldDst = state[dstSquare];
-        char srcPce = state[srcSquare];
-        state[dstSquare] = srcPce;
-        state[srcSquare] = '0';
+        // Make the move
+        state[move.to] = pieceMoving;
+        state[move.from] = '0';
 
-        int moveVal = -negamax(state, 3, negInfinite, posInfinite, HUMAN_PLAYER);
+
+        int moveVal = -negamax(state, MAX_DEPTH, negInfinite, posInfinite, HUMAN_PLAYER);
 
         // Undo the move
-        state[dstSquare] = oldDst;
-        state[srcSquare] = srcPce;
+        state[move.to] = oldDestination;
+        state[move.from] = pieceMoving;
         
         // If the value of the current move is more than the best value, update best
         if (moveVal > bestVal) {
@@ -440,6 +479,12 @@ void Chess::updateAI()
     }
 
     if (bestVal != negInfinite) {
+        // Calculate and print out boards per second
+        const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - searchStart).count();
+        const double boardsPerSecond = seconds > 0.0 ? static_cast<double>(_countMoves) / seconds : 0.0;
+        std::cout << "Moves checked: " << _countMoves << " (" << std::fixed << std::setprecision(2) << boardsPerSecond << " boards/s)" << std::defaultfloat << std::endl;
+
+        // Make best move
         int srcSquare = bestMove.from;
         int dstSquare = bestMove.to;
         BitHolder& src = getHolderAt(srcSquare&7, srcSquare/8);
@@ -455,92 +500,54 @@ int Chess::negamax(std::string& state, int depth, int alpha, int beta, int playe
 {
     _countMoves++;
 
+    // Base case
     if (depth == 0) {
-        return evaluateBoard(state) * playerColor;
+        // Multiply by negative player color because evaluate function evaluates for white
+        return evaluateBoard(state) * -playerColor;
     }
 
+    // Generate moves for this board state
     auto newMoves = generateAllMoves(state, playerColor);
 
     int bestVal = negInfinite; // Min value
     
     for (auto move : newMoves) {
 
-        int srcSquare = move.from;
-        int dstSquare = move.to;
+        // Save previous state
+        char oldDestination = state[move.to];
+        char pieceMoving = state[move.from];
 
-        // Makes the move in state string
-        char oldDst = state[dstSquare];
-        char srcPce = state[srcSquare];
-        state[dstSquare] = state[srcSquare];
-        state[srcSquare] = '0';
+        // Make the move
+        state[move.to] = pieceMoving;
+        state[move.from] = '0';
 
-        int moveVal = -negamax(state, depth - 1, -beta, -alpha, -playerColor);
+        // Recursively evaluate (note the negation and flipped player color)
+        bestVal = std::max(bestVal, -negamax(state, depth - 1, -beta, -alpha, -playerColor));
 
         // Undo the move
-        state[dstSquare] = oldDst;
-        state[srcSquare] = srcPce;
-        
-        // If the value of the current move is more than the best value, update best
-        if (moveVal > bestVal) {
-            bestVal = moveVal;
+        state[move.to] = oldDestination;
+        state[move.from] = pieceMoving;
+
+        // Alpha-beta pruning
+        alpha = std::max(alpha, bestVal);
+
+        if (alpha >= beta) {
+            break;
         }
     }
 
     return bestVal;
 }
 
-#define FLIP(x) (x^56)
 int Chess::evaluateBoard(const std::string& state)
 {
-    int evaluateScores[128];
-    evaluateScores['P'] = 100;
-    evaluateScores['N'] = 300;
-    evaluateScores['B'] = 400;
-    evaluateScores['R'] = 500;
-    evaluateScores['Q'] = 900;
-    evaluateScores['K'] = 2000;
-    evaluateScores['p'] = -100;
-    evaluateScores['n'] = -300;
-    evaluateScores['b'] = -400;
-    evaluateScores['r'] = -500;
-    evaluateScores['q'] = -900;
-    evaluateScores['k'] = -2000;
-    evaluateScores['0'] = 0;
-
     int value = 0;
     int square = 0;
     for (char ch : state) {
-        value += evaluateScores[ch];
-        bool isWhite = isupper(ch);
-        switch(ch) {
-            case 'P':
-            case 'p':
-                value += isWhite ? pawnTable[FLIP(square)] : -pawnTable[square];
-                break;
-            case 'N':
-            case 'n':
-                value += isWhite ? knightTable[FLIP(square)] : -knightTable[square];
-                break;
-            case 'B':
-            case 'b':
-                value += isWhite ? bishopTable[FLIP(square)] : -bishopTable[square];
-                break;
-            case 'R':
-            case 'r':
-                value += isWhite ? rookTable[FLIP(square)] : -rookTable[square];
-                break;
-            case 'Q':
-            case 'q':
-                value += isWhite ? queenTable[FLIP(square)] : -queenTable[square];
-                break;
-            case 'K':
-            case 'k':
-                value += isWhite ? kingTable[FLIP(square)] : -kingTable[square];
-                break;
-        }
+        value += _evaluateScores[ch];
+        value += _pieceSquareTables[ch][square];
         square++;
     }
 
     return value;
 }
-

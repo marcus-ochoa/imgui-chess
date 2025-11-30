@@ -8,6 +8,8 @@ constexpr int pieceSize = 80;
 constexpr int negInfinite = -100000;
 constexpr int posInfinite = 100000;
 
+constexpr int MAX_DEPTH = 4;
+
 // Define constant bitmasks
 constexpr uint64_t NotAFile(0xFEFEFEFEFEFEFEFEULL); // A file mask
 constexpr uint64_t NotHFile(0x7F7F7F7F7F7F7F7FULL); // H file mask
@@ -81,7 +83,6 @@ public:
     Grid* getGrid() override { return _grid; }
 
 private:
-    
 
     int _countMoves = 0;
 
@@ -114,4 +115,8 @@ private:
 
     BitboardElement _bitboards[e_numBitboards];
     int _bitboardLookup[128];
+
+    int _evaluateScores[128];
+
+    const int *_pieceSquareTables[128];
 };
